@@ -1,0 +1,68 @@
+import urllib.request
+from bs4 import BeautifulSoup
+import os
+
+
+header = {
+    "User-Agent": 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/84.0.4147.125 Safari/537.36',
+    'Accept': '*/*',
+    'Accept-Language': 'en-US,en;q=0.8',
+    'Cache-Control': 'max-age=0',
+    'Connection': 'keep-alive'
+}
+"""
+  用户代理(User-Agent):用于伪装程序不是爬虫，让服务器以为你是一个正常用户。
+  是一种向访问网站提供你所使用的浏览器类型、操作系统及版本、CPU 类型、浏览器渲染引擎、浏览器语言、浏览器插件等信息的标识。
+  UA字符串在每次浏览器 HTTP 请求时发送到服务器
+"""
+
+def download(url, picAlt, name):
+    path = 'D:\\pythonDemoPic\\' + picAlt + '\\'
+    if not os.path.exists(path):  # 判断系统是否存在该路径，不存在则创建
+        os.makedirs(path)
+    urllib.request.urlretrieve(url, '{0}{1}.jpg'.format(path, name))  # ，下载图片保存在本地
+
+downDic = set()
+
+def loop(targetUrl, limit):
+
+    req = urllib.request.Request(url=targetUrl, headers=header)
+    response = urllib.request.urlopen(req)
+    html = response.read().decode('gb2312', 'ignore')
+    soup = BeautifulSoup(html, 'html.parser')
+
+    imgSource = soup.find_all('div', attrs={'id': 'big-pic'})[0]
+    imgUrl = imgSource.find('img')['src']          # 当前下载的图片URL
+
+    name = imgSource.find('img')['alt']               # 文件夹名称
+    num = soup.find('li', attrs={'class': 'thisclass'}).find('a').text     # 匹配title中的数字做图片名称
+
+    downDic.add(name)
+
+    if len(downDic) > limit:
+        return
+
+    print(name + " : " + str(num) + " : " + imgUrl)
+
+    download(imgUrl, name, num)
+
+    nextPageUrl = ""
+    if imgSource.find('a') is None:
+        print("没有更多的图片了....")
+        nextPageUrl = soup.find('div', attrs={'class': 'imgc'}).find('a')['href']
+    else:
+        tempUrl = imgSource.find('a')['href']
+        nextPageUrl = "https://www.mmonly.cc/mmtp/qcmn/" + imgSource.find('a')['href']  # 下一张图片的URL
+        if "https" in tempUrl:
+            nextPageUrl = tempUrl
+    print("nextPageUrl: " + nextPageUrl)
+
+    loop(nextPageUrl, limit)
+    return
+
+
+
+if __name__ == '__main__':
+    targetUrl = "https://www.mmonly.cc/mmtp/qcmn/324822.html"
+    loop(targetUrl, limit=4)
+    print("【【【--------------------------------COMPLETE！--------------------------------】】】")
